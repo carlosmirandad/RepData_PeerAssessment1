@@ -6,14 +6,27 @@ This report persents an analysis of the walking paterns of an anonymous individu
 
 First, I read the raw data from the CSV file into an R dataframe and examined the contents of the variables (question #1):
 
-```{r load, echo = TRUE}
+
+```r
 dat <- read.csv("activity.csv")
 summary(dat)
 ```
 
+```
+##      steps               date          interval   
+##  Min.   :  0.0   2012-10-01:  288   Min.   :   0  
+##  1st Qu.:  0.0   2012-10-02:  288   1st Qu.: 589  
+##  Median :  0.0   2012-10-03:  288   Median :1178  
+##  Mean   : 37.4   2012-10-04:  288   Mean   :1178  
+##  3rd Qu.: 12.0   2012-10-05:  288   3rd Qu.:1766  
+##  Max.   :806.0   2012-10-06:  288   Max.   :2355  
+##  NA's   :2304    (Other)   :15840
+```
+
 Next, we need to process the data (question #2.) The summary shows that the date was imported as a "character" factor, so I converted it to a true "date" variable. I also combined the information of the date and interval variables into a single "datetime" variable (just in case we may need them together for plotting or analysis.) The following pre-processing steps did this:
 
-```{r preprocess, echo = TRUE}
+
+```r
 dat$datetime <- as.POSIXct(dat$date) + dat$interval*60
 dat$date     <- as.Date(dat$date, format="%Y-%m-%d")
 ```
@@ -25,17 +38,42 @@ Now the dataset is processed and ready for analysis (except for the missing valu
 
 To answer this question, I aggregated the data at the daily level and then examined the resulting table. The two tables below show the "total number of steps" for the first few days and for the last few days of the study, respectively:
 
-```{r aggregate_daily, echo = TRUE}
+
+```r
 datDailyTotals   <- aggregate(steps~date, data=dat, FUN=sum)
 head(datDailyTotals)
+```
+
+```
+##         date steps
+## 1 2012-10-02   126
+## 2 2012-10-03 11352
+## 3 2012-10-04 12116
+## 4 2012-10-05 13294
+## 5 2012-10-06 15420
+## 6 2012-10-07 11015
+```
+
+```r
 tail(datDailyTotals)
+```
+
+```
+##          date steps
+## 48 2012-11-24 14478
+## 49 2012-11-25 11834
+## 50 2012-11-26 11162
+## 51 2012-11-27 13646
+## 52 2012-11-28 10183
+## 53 2012-11-29  7047
 ```
 
 It appears that the counts of the first and last record are imcomplete (since they are much lower than those of the contiguous days) which could cause the results to be understated. Additionally two dates seem to be completely missing (Oct 1st and Nov 30th.) For the purpose of this assignment, I will leave the dataset as is. But in a longer project, I would certainly research why is this happening. And depending on the findings, I may discard some records as invalid or outliers.
 
 Next, I calculated the required statistics (mean & median) and ploted the histogram. Here are the answers to both questions (1 & 2):
 
-```{r fig.width=9, fig.height=6, echo = TRUE}
+
+```r
 meanDailyTotal   <- mean(datDailyTotals$steps)
 medianDailyTotal <- median(datDailyTotals$steps)
 hist(datDailyTotals$steps, 
@@ -48,7 +86,16 @@ rug(datDailyTotals$steps)
 legend("topright",c("Mean of Total Daily Steps","Median of Total Daily Steps"), lty=1, lwd=c(4,1), col=c("red","green"))
 abline(v=meanDailyTotal,   lwd=4, col="red")
 abline(v=medianDailyTotal, lwd=1, col="green")
+```
+
+![plot of chunk unnamed-chunk-1](figure/unnamed-chunk-1.png) 
+
+```r
 cat("Mean steps per day =",meanDailyTotal,"and median steps per day =",medianDailyTotal,"\n")
+```
+
+```
+## Mean steps per day = 10766 and median steps per day = 10765
 ```
 
 
@@ -56,7 +103,8 @@ cat("Mean steps per day =",meanDailyTotal,"and median steps per day =",medianDai
 
 To answer this question, I aggregated the data at the "5-minute interval" level, calculated key statistics for each interval time, and looked at the data again: 
 
-```{r aggregate_interval, echo = TRUE}
+
+```r
 datIntervalTotals   <- aggregate(dat$steps~dat$interval, FUN=mean, na.rm=T)
 datIntervalTotals2  <- tapply(dat$steps, dat$interval, quantile, probs=c(0,.25,.50,0.75,1), na.rm=T)
 datIntervalTotals2  <- do.call(rbind,datIntervalTotals2)
@@ -66,9 +114,20 @@ rownames(datIntervalTotals) <- NULL
 head(datIntervalTotals)
 ```
 
+```
+##   interval    mean min Q1 Q2 Q3 max
+## 1        0 1.71698   0  0  0  0  47
+## 2        5 0.33962   0  0  0  0  18
+## 3       10 0.13208   0  0  0  0   7
+## 4       15 0.15094   0  0  0  0   8
+## 5       20 0.07547   0  0  0  0   4
+## 6       25 2.09434   0  0  0  0  52
+```
+
 Below is the requested time series plot of the average number of steps taken per 5-minute interval, averaged across all days. Although it was not requested, I added the median as well:
 
-```{r fig.width=11, fig.height=6, echo = TRUE}
+
+```r
 plot(datIntervalTotals$interval, datIntervalTotals$mean, 
      type = "l", 
      col="red", 
@@ -77,16 +136,22 @@ plot(datIntervalTotals$interval, datIntervalTotals$mean,
      ylab="Number of Steps")
 lines(datIntervalTotals$interval, datIntervalTotals$Q2, col="green")
 legend("topright",c("Average steps (across all days)","Median steps (across all days)"), lwd=c(4,1), lty=1, col=c("red","green"))
-
 ```
+
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2.png) 
 
 And now we can determine which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps (question #2):
 
-```{r aggregate_interval2, echo = TRUE}
+
+```r
 busiest_interval       <- which.max(datIntervalTotals$mean)
 busiest_interval_nbr   <- datIntervalTotals$interval[busiest_interval]
 busiest_interval_steps <- datIntervalTotals$mean[busiest_interval]
 cat('On average, the most number of steps happened at time interval',busiest_interval_nbr,'and the average number of steps at that point was',busiest_interval_steps,'per day.\n')
+```
+
+```
+## On average, the most number of steps happened at time interval 835 and the average number of steps at that point was 206.2 per day.
 ```
 
 
@@ -94,11 +159,16 @@ cat('On average, the most number of steps happened at time interval',busiest_int
 
 The next step is to calculate the number of missing values in the dataset (question #1.) Here are the results:
 
-```{r missing1, echo = TRUE}
+
+```r
 miss_steps <- sum(is.na(dat$steps))
 miss_dates <- sum(is.na(dat$date))
 miss_intrs <- sum(is.na(dat$interval))
 cat("The number of mising step values is",miss_steps,"while missing dates are",miss_dates,"and missing time intervals are",miss_intrs,"\n")
+```
+
+```
+## The number of mising step values is 2304 while missing dates are 0 and missing time intervals are 0
 ```
 
 So, the date and time variables are fully populated but the steps variable has some missing values which we need to impute. We are asked to devise an adequate strategy to do so (question #2.)  Here are my thoughts:
@@ -108,7 +178,8 @@ So, the date and time variables are fully populated but the steps variable has s
 
 Here is the process that imputes those missing values using the selected strategy and creates a new dataset (question #3): 
 
-```{r missing2, echo = TRUE}
+
+```r
 #Calculate inputs for the imputation:
 datDailyMeans <- aggregate(steps~date, data=dat, FUN=mean, na.rm=T)
 overallMean   <- mean(dat$steps, na.rm=T)  
@@ -132,14 +203,20 @@ for (i in 1:nrow(dat)) {
 
 After running that process, we should probably check the new dataframe for missing values (just to confirm that none are left.)
 
-```{r missing3, echo = TRUE}
+
+```r
 miss_steps_new <- sum(is.na(datNew$steps))
 cat("The number of mising step values which originally was",miss_steps,"is now",miss_steps_new,"after the imputation.\n")
 ```
 
+```
+## The number of mising step values which originally was 2304 is now 0 after the imputation.
+```
+
 Excellent! The new dataset is complete. The last part of this question is to repeat the histogram and mean calculations and determine how different the results are (question #4.) Here is the answer:
 
-```{r fig.width=9, fig.height=6, echo = TRUE}
+
+```r
 datDailyTotalsNew   <- aggregate(steps~date, data=datNew, FUN=sum)
 meanDailyTotalNew   <- mean(datDailyTotalsNew$steps)
 medianDailyTotalNew <- median(datDailyTotalsNew$steps)
@@ -159,8 +236,24 @@ abline(v=meanDailyTotalNew,   lwd=4, col="red")
 abline(v=medianDailyTotalNew, lwd=1, col="green")
 abline(v=meanDailyTotal,   lwd=4, lty=2, col="red")
 abline(v=medianDailyTotal, lwd=1, lty=2, col="green")
+```
+
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+
+```r
 cat("Mean steps per day =",meanDailyTotalNew,"and median steps per day =",medianDailyTotalNew,"\n")
+```
+
+```
+## Mean steps per day = 9354 and median steps per day = 10395
+```
+
+```r
 cat("The change in the mean is =",meanDailyTotalNew-meanDailyTotal,"and the change in the median is =",medianDailyTotalNew-medianDailyTotal,"\n")
+```
+
+```
+## The change in the mean is = -1412 and the change in the median is = -370
 ```
 
 So, in conclusion, when we imputed missing values the median dropped a little bit (not too much) and the mean dropped significantly. This is likely due to the zeros that were added to the distribution (because those days didn't have any steps recorded.) That is something that would have to be further investigated. We would have to confirm why we are missing those steps. Perhaps the fitbit device was not properly setup. Or the battery was not charged. Maybe we need to exclude some specific days from the analysis (in order to ensure that only data of good quality is used.) But if we determine that the device was working properly and the person just didnt walk on those days (maybe it was sick and stayed in bed) in that case it may be correct to include the zeroes in the analysis because it accurately represents what the subject did. 
@@ -169,14 +262,16 @@ So, in conclusion, when we imputed missing values the median dropped a little bi
 
 First we need to create a new factor variable in the dataset indicating whether a given date is a weekday or weekend day (question #1.)
 
-```{r weekends1, echo = TRUE}
+
+```r
 datNew$weekday = weekdays(datNew$date)
 datNew$daytype <- as.factor(ifelse(datNew$weekday=="Saturday" | datNew$weekday=="Sunday","Weekend","Weekday"))
 ```
 
 Finally, we are ready to create the pannel plot (question #2):
 
-```{r fig.width=9, fig.height=6, echo = TRUE}
+
+```r
 library(lattice) 
 #Aggregate data (average steps) by interval and daytype
 datPlot <- aggregate(steps~interval+daytype, data=datNew, FUN=mean, na.rm=T)
@@ -189,6 +284,8 @@ xyplot(steps ~ interval | daytype,
     layout=c(1,2)
     )
 ```
+
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
 
 One can observe some differences in the patterns:
 - The subject starts walking earlier on weekdays (there is a spike before 6AM) compared to the weekends (slower and more variable start between 7 and 8AM).
